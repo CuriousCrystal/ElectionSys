@@ -3,3 +3,10 @@ venv312/
 __pycache__/
 *.pyc
 .env
+.env.local
+.env.production
+*.db
+*.sqlite
+*.sqlite3
+Responses/
+temp_voice.mp3

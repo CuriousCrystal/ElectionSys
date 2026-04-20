@@ -11,22 +11,55 @@ import sys
 # Initialize OpenAI client
 client = OpenAI(
     api_key=apikey,
-    base_url="https://openrouter.ai/api/v1"
+    base_url="https://api.x.ai/v1"
 )
 
 
-# Initialize chatStr variable
-chatStr = ""
+import requests
+import json
 
-# Function to generate chat-based response using Grok API
+# Define the Event Coordination Tools for OpenAI
+event_tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_wait_times",
+            "description": "Get the current real-time crowd density and wait times for all areas in the event venue.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_best_route",
+            "description": "Ask the system for the best, least crowded gate and restroom automatically.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    }
+]
+
+def fetch_events_api(endpoint):
+    try:
+        res = requests.get(f"http://localhost:8000/api/{endpoint}")
+        return json.dumps(res.json())
+    except:
+        return json.dumps({"error": "Event server offline."})
+
 def ai(query):
-    # Create the text variable to store the response
+    # Keep standard completion for long-form essays
     text = f"AI Response for Prompt: {query}\n *********************************************\n\n\n\n"
-
     try:
         # Call the OpenAI API to get the response
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="grok-beta",
             messages=[
                 {
                     "role": "system",
@@ -63,42 +96,60 @@ def ai(query):
         print(f"Error calling AI: {e}")
 
 
+chat_history = [
+    {"role": "system", "content": "You are August, the official Event Concierge Assistant. You help attendees navigate the physical event, manage crowds, find restrooms, and fetch real-time wait times. Be warm and efficient. Always use your available tools to check wait times before recommending a route!"}
+]
+
 def chat(query):
-    global chatStr
-
-    chatStr += f"User: {query}\nAugust: "
-    
+    chat_history.append({"role": "user", "content": query})
     try:
-        # Call the OpenAI API to get the response
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are August, a friendly and helpful AI assistant. Speak in a casual, warm, and conversational tone. Use simple language and be enthusiastic about helping."
-                },
-                {
-                    "role": "user",
-                    "content": chatStr
-                }
-            ],
-            temperature=1,
-            max_tokens=256,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0
+            model="grok-beta",
+            messages=chat_history,
+            tools=event_tools,
+            temperature=0.7
         )
-
-        # Extract response text
-        if response.choices and len(response.choices) > 0:
-            response_text = response.choices[0].message.content
-            chatStr += f"{response_text}\n"
-            print(chatStr)
-            speak(response_text)
-            return response_text
+        
+        message = response.choices[0].message
+        
+        # Check if the AI wants to use a tool to fetch live data
+        if message.tool_calls:
+            chat_history.append(message) # Append the assistant's request to use a tool
+            
+            for tool_call in message.tool_calls:
+                function_name = tool_call.function.name
+                if function_name == "get_wait_times":
+                    result = fetch_events_api("zones")
+                elif function_name == "get_best_route":
+                    result = fetch_events_api("recommendations")
+                else:
+                    result = "{}"
+                    
+                chat_history.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result
+                })
+                
+            # Second call to get the synthesized response based on the new data
+            second_response = client.chat.completions.create(
+                model="grok-beta",
+                messages=chat_history,
+                temperature=0.7
+            )
+            final_response = second_response.choices[0].message.content
+            chat_history.append({"role": "assistant", "content": final_response})
+            print(f"August: {final_response}")
+            speak(final_response)
+            return final_response
+            
         else:
-            print("Error: No response from API.")
-            return ""
+            final_response = message.content
+            chat_history.append({"role": "assistant", "content": final_response})
+            print(f"August: {final_response}")
+            speak(final_response)
+            return final_response
+            
     except Exception as e:
         print(f"Error in chat: {e}")
         return ""
