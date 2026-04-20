@@ -68,44 +68,5 @@ Admin:   admin / admin123       (full access)
 Manager: manager / manager123   (view analytics & alerts)
 Viewer:  viewer / viewer123     (read-only dashboard)
 
-Project Structure
-.
-├── main.py                    # Voice assistant entry point
-├── data_engine.py             # FastAPI server + crowd simulation
-├── auth.py                    # JWT authentication
-├── analytics.py               # Historical data & reports
-├── alerts.py                  # Alert generation & thresholds
-├── database.py                # SQLAlchemy models
-├── config.py                  # Environment variable management
-├── dashboard/                 # React frontend
-│   ├── src/
-│   │   ├── App.jsx           # Main app component
-│   │   ├── Login.jsx         # Authentication UI
-│   │   └── AlertsPanel.jsx   # Alert notifications
-│   └── package.json
-├── requirements.txt           # Python dependencies
-└── .env.example              # Environment template
 
-The Architecture
-┌─────────────────────────────────────────────┐
-│         User (Voice or Web)                 │
-│    "What's the shortest wait?"              │
-└──────────────┬──────────────────────────────┘
-               │
-        ┌──────▼──────┐
-        │   August    │
-        │   (Grok)    │
-        └──────┬──────┘
-               │ "I need to check wait times"
-       ┌───────▼────────┐
-       │  FastAPI       │
-       │  /api/zones    │
-       │  /api/recommendations
-       └───────┬────────┘
-               │ (randomly generated data)
-        ┌──────▼──────┐
-        │  SQLite DB  │
-        │  (stores    │
-        │  fake data) │
-        └─────────────┘
 
