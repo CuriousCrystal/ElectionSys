@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import random
 import asyncio
 from datetime import datetime
@@ -8,6 +10,7 @@ from alerts import check_and_create_alerts
 from auth import router as auth_router
 from analytics import router as analytics_router
 from alerts import router as alerts_router
+import os
 
 app = FastAPI(title="Event Crowd Management Engine")
 
@@ -16,7 +19,7 @@ app.include_router(auth_router)
 app.include_router(analytics_router)
 app.include_router(alerts_router)
 
-# Allow CORS for the dashboard
+# Allow CORS for the dashboard (only needed for local development)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -106,5 +109,20 @@ def get_recommendations():
         "best_gate": {"name": best_gate[0], "wait_time": best_gate[1]["wait_time"]},
         "best_restroom": {"name": best_restroom[0], "wait_time": best_restroom[1]["wait_time"]}
     }
+
+# Serve static files from React build (MUST be last to not override API routes)
+frontend_dist = os.path.join(os.path.dirname(__file__), "dashboard", "dist")
+if os.path.exists(frontend_dist):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve React SPA for all non-API routes"""
+        # Serve index.html for all routes (API routes are handled by routers above)
+        index_path = os.path.join(frontend_dist, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        
+        return {"error": "Frontend not built. Run: cd dashboard && npm run build"}
 
 # To run: uvicorn data_engine:app --reload

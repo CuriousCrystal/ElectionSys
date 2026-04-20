@@ -10,3 +10,7 @@ __pycache__/
 *.sqlite3
 Responses/
 temp_voice.mp3
+
+# Frontend (keep dist for deployment)
+dashboard/node_modules/
+dashboard/.env.local

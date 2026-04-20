@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: event-management-system
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      cd dashboard
+      npm install
+      npm run build
+      cd ..
+    startCommand: uvicorn data_engine:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/zones
+    envVars:
+      - key: XAI_API_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: DATABASE_URL
+        value: sqlite:///./event_management.db
+      - key: PORT
+        value: 10000
