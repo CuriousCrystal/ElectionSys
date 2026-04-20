@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, Clock, MapPin, Activity, LogOut, BarChart3 } from 'lucide-react';
 import Login from './Login';
 import AlertsPanel from './AlertsPanel';
+import { AUTH_ENDPOINTS, ZONES_ENDPOINTS } from './api';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -13,7 +14,7 @@ function App() {
   // Fetch user info
   useEffect(() => {
     if (token) {
-      fetch('http://localhost:8000/api/auth/me', {
+      fetch(AUTH_ENDPOINTS.me, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -33,7 +34,7 @@ function App() {
 
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/zones', {
+        const response = await fetch(ZONES_ENDPOINTS.zones, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },

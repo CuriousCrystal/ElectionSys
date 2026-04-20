@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, AlertCircle, Info } from 'lucide-react';
+import { ALERTS_ENDPOINTS } from './api';
 
 function AlertsPanel({ token }) {
   const [alerts, setAlerts] = useState([]);
@@ -8,7 +9,7 @@ function AlertsPanel({ token }) {
 
   const fetchAlerts = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/alerts/recent?limit=10');
+      const response = await fetch(ALERTS_ENDPOINTS.recent);
       const data = await response.json();
       setAlerts(data.alerts);
     } catch (error) {
@@ -16,7 +17,7 @@ function AlertsPanel({ token }) {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/alerts/unread-count');
+      const response = await fetch(ALERTS_ENDPOINTS.unreadCount);
       const data = await response.json();
       setUnreadCount(data.unread_count);
     } catch (error) {

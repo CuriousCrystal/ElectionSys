@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Lock, User } from 'lucide-react';
+import { AUTH_ENDPOINTS } from './api';
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -17,7 +18,7 @@ function Login({ onLogin }) {
       formData.append('username', username);
       formData.append('password', password);
 
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch(AUTH_ENDPOINTS.login, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
