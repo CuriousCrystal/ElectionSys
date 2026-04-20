@@ -62,14 +62,6 @@ npm run dev
 Dashboard runs on: http://localhost:5173
 Run the Voice Assistant
 bashpython main.py
-Then speak commands like:
-
-"What are the wait times?"
-"Where should I go to avoid crowds?"
-"Open YouTube"
-"What's the time?"
-"Exit" (to quit)
-
 
 Default Credentials
 Admin:   admin / admin123       (full access)
