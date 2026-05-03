@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     xai_api_key: str = ""
 
     # Server
+    host: str = "0.0.0.0"
+    port: int = 8000
     cors_origins: List[str] = ["http://localhost:5173"]
     rate_limit_max_requests: int = 120
     rate_limit_window_seconds: int = 60
@@ -72,6 +74,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore" # Allow extra fields like HOST and PORT without crashing
 
 
 settings = Settings()
