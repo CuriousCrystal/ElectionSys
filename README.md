@@ -1,14 +1,32 @@
-# Election Process Assistant
+ElectionSys is built to demonstrate how modern election systems can be designed using backend logic, APIs, and cloud deployment.
+It focuses on efficiency, modular design, and real-world applicability.
 
-A focused, interactive assistant that helps users understand election processes, timelines, and voting steps in an easy-to-follow way.
+✨ Features
+🧑‍💼 Voter registration & management
+🗳️ Secure voting system
+📊 Real-time vote counting & result display
+🔐 Structured backend logic for data integrity
+🔄 API-based communication between components
+🛠️ Tech Stack
+Backend: (Flask / Node.js — update based on your project)
+Database: (MySQL / MongoDB — update accordingly)
+Frontend: HTML, CSS, JavaScript
+APIs: RESTful APIs for system interaction
+Cloud & Deployment: Google Cloud
+☁️ Cloud & Deployment
 
-This repo contains:
-- a React frontend help center and chat widget
-- a FastAPI backend AI chat endpoint
-- simple deployment guidance for Netlify (frontend) and Google Cloud Run (backend)
+This project was deployed using Google Cloud, where I learned:
 
----
-
+How to host applications in a cloud environment
+Managing services and resources
+Handling deployment pipelines
+Making applications accessible over the internet
+🧠 Key Learnings
+Building and integrating APIs
+Understanding real-world system design
+Cloud deployment using Google Cloud
+Debugging and handling rate limits & quotas
+Structuring scalable backend systems
 ## 🚀 Quick Start
 
 ### Run the backend
@@ -69,20 +87,6 @@ ElectionSys/
 ├── .env.example
 ├── DEPLOYMENT.md
 └── README.md
-```
-
----
-
-## 💡 What changed
-
-- Removed legacy dashboard/auth/data persistence files from the active backend and frontend stack.
-- Kept the app focused on an election assistant experience with chat and help content.
-- Switched deployment guidance to Netlify for frontend and Google Cloud Run (or equivalent) for backend.
-- Removed database and JWT implementation from the main flow.
-
----
-
-## 📌 Notes
 
 - The backend is a stateless AI chat service and does not require a local database.
 - The frontend is static and compatible with Netlify hosting.
