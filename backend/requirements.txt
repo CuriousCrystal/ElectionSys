@@ -1,4 +1,4 @@
-# Core FastAPI
+﻿# Core FastAPI
 fastapi==0.109.0
 uvicorn==0.27.0
 
@@ -9,3 +9,8 @@ python-dotenv==1.0.0
 
 # AI Integration
 openai==1.12.0
+
+# GCP Integration
+google-cloud-secret-manager==2.16.2
+
+mangum==0.17.0

@@ -1,27 +1,26 @@
-services:
+﻿services:
+  # Backend: FastAPI
   - type: web
-    name: event-management-system
-    env: python
+    name: election-assistant-backend
+    runtime: python
     region: oregon
     plan: free
-    buildCommand: |
-      pip install -r requirements.txt
-      cd dashboard
-      npm install
-      npm run build
-      cd ..
-    startCommand: uvicorn data_engine:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /api/zones
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
     envVars:
       - key: XAI_API_KEY
         sync: false
-      - key: JWT_SECRET_KEY
-        generateValue: true
-      - key: JWT_ALGORITHM
-        value: HS256
-      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 30
-      - key: DATABASE_URL
-        value: sqlite:///./event_management.db
-      - key: PORT
-        value: 10000
+      - key: CORS_ORIGINS
+        value: "https://election-assistant.netlify.app" # Replace with your Netlify/Render frontend URL
+
+  # Frontend: Static React Site (Optional: You can also use Netlify for this)
+  - type: static
+    name: election-assistant-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    envVars:
+      - key: VITE_API_URL
+        value: "https://election-assistant-backend.onrender.com" # This will be your backend URL

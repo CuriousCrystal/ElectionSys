@@ -1,255 +1,105 @@
-# Deployment Guide: Frontend on Netlify, Backend on Cloud Run
+﻿# Deployment Guide: Frontend on Netlify, Backend on Google Cloud Run
 
-This repo is now configured as an election-assistant app with:
-- **Frontend:** static React site hosted on Netlify
-- **Backend:** Python FastAPI service hosted on Google Cloud Run or another Python-capable cloud provider
-
----
-
-## Frontend Deployment (Netlify)
-
-1. Build the frontend:
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-2. Deploy to Netlify:
-
-- Use the [Netlify app](https://app.netlify.com) and connect your GitHub repository, or
-- Use the Netlify CLI:
-
-```bash
-npm install -g netlify-cli
-netlify login
-cd frontend
-netlify deploy --prod
-```
-
-3. Set environment variables in Netlify:
-
-- `VITE_API_URL` = `https://YOUR_BACKEND_URL`
-
-4. Ensure the publish directory is `dist`.
+This repository is configured as an Election Assistant app (August) with:
+- **Frontend:** Static React site hosted on Netlify.
+- **Backend:** Python FastAPI service hosted on Google Cloud Run.
 
 ---
 
-## Backend Deployment (Google Cloud Run)
+## 1. Backend Deployment (Google Cloud Run)
 
-1. Install Google Cloud SDK and authenticate:
+### Prerequisites
+- Google Cloud SDK installed and authenticated.
+- A Google Cloud Project created.
+- Billing enabled for the project.
 
-```bash
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-```
+### Setup Secret Manager (Recommended)
+Store your sensitive API keys securely in GCP Secret Manager:
 
-2. Build and push a container image:
+1. **Create the secret**:
+   ```bash
+   gcloud secrets create XAI_API_KEY --replication-policy="automatic"
+   ```
 
-```bash
-cd backend
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/election-assistant-backend
-```
+2. **Add your API key value**:
+   ```bash
+   echo -n "YOUR_XAI_API_KEY" | gcloud secrets versions add XAI_API_KEY --data-file=-
+   ```
 
-3. Deploy to Cloud Run:
+3. **Ensure the Cloud Run service account** has the `Secret Manager Secret Accessor` role.
 
-```bash
-gcloud run deploy election-assistant-backend \
-  --image gcr.io/YOUR_PROJECT_ID/election-assistant-backend \
-  --platform managed \
-  --region YOUR_REGION \
-  --allow-unauthenticated \
-  --set-env-vars XAI_API_KEY=YOUR_API_KEY,CORS_ORIGINS=https://YOUR_NETLIFY_SITE_URL
-```
+### Deploy to Cloud Run
 
-4. Update the frontend `VITE_API_URL` to point to the Cloud Run service URL.
+1. **Configure your project**:
+   ```bash
+   gcloud config set project YOUR_PROJECT_ID
+   ```
 
----
+2. **Build and push the container image** using Cloud Build:
+   ```bash
+   cd backend
+   gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/election-assistant-backend
+   ```
 
-## Environment Configuration
+3. **Deploy the service**:
+   ```bash
+   gcloud run deploy election-assistant-backend \
+     --image gcr.io/YOUR_PROJECT_ID/election-assistant-backend \
+     --platform managed \
+     --region YOUR_REGION \
+     --allow-unauthenticated \
+     --set-env-vars GCP_PROJECT_ID=YOUR_PROJECT_ID,CORS_ORIGINS=https://YOUR_NETLIFY_SITE_URL
+   ```
+   *Note: The backend is now configured to automatically fetch `XAI_API_KEY` from Secret Manager if `GCP_PROJECT_ID` is set.*
 
-Copy the example env file and update the values:
-
-```bash
-cp .env.example .env
-```
-
-Required variables:
-
-- `GCP_PROJECT_ID`
-- `GOOGLE_APPLICATION_CREDENTIALS`
-- `XAI_API_KEY`
-- `CORS_ORIGINS`
-
-> Do not commit service account credentials or `.env` files to source control.
-
----
-
-## Notes on Compatibility
-
-- **Netlify cannot host the Python backend**. The frontend is static and compatible with Netlify, but the backend requires a container or dedicated Python runtime.
-- **Use Cloud Run or similar** for the FastAPI API, or host on any provider that supports Python web services.
-- **CORS must be configured** to allow the Netlify frontend origin in the backend settings.
+4. **Copy the Service URL** provided after deployment (e.g., `https://election-assistant-backend-abc-de.a.run.app`).
 
 ---
 
-## Security Considerations
+## 2. Frontend Deployment (Netlify)
 
-- Keep secret keys out of source control.
-- Restrict `CORS_ORIGINS` to only trusted frontend domains.
-- Do not store sensitive production credentials in client-side code.
-- Set `GOOGLE_APPLICATION_CREDENTIALS` on the backend host only.
+1. **Build and Deploy**:
+   - Connect your GitHub repo to Netlify for automatic deployments, OR
+   - Deploy manually:
+     ```bash
+     cd frontend
+     npm install
+     npm run build
+     netlify deploy --prod --dir=dist
+     ```
+
+2. **Configure Environment Variables in Netlify**:
+   - Go to Site Settings > Environment Variables.
+   - Add `VITE_API_URL`: Set this to your **Cloud Run Service URL** from Step 1.4.
 
 ---
 
-## Local Development
+## 3. Local Development
 
-Run backend locally:
-
+### Backend
 ```bash
 cd backend
 python -m pip install -r requirements.txt
+# Create a .env file with XAI_API_KEY
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Run frontend locally:
-
+### Frontend
 ```bash
 cd frontend
 npm install
+# Update .env or use the default localhost URL
 npm run dev
 ```
 
-Open the site at `http://localhost:5173`.
-
-
-**Problem:** Backend not starting
-```bash
-# Check Render logs
-# Go to Render Dashboard → Your Service → Logs
-```
-
-**Problem:** Database errors
-- SQLite may not persist data on free tier
-- Consider upgrading to PostgreSQL on Render
-
-**Problem:** CORS errors
-- Verify your Netlify URL is in `allow_origins`
-- Check browser console for exact error
-
-### Frontend Issues
-
-**Problem:** Build fails
-```bash
-# Test build locally
-cd dashboard
-npm run build
-```
-
-**Problem:** API calls fail
-- Verify `VITE_API_URL` is set correctly
-- Check browser Network tab for errors
-- Ensure backend CORS is configured
-
-**Problem:** Environment variables not loading
-- Vite requires `VITE_` prefix
-- Rebuild after changing env vars
-- Clear browser cache
-
 ---
 
-## Monitoring & Maintenance
+## 4. Troubleshooting
 
-### 1. Set Up Monitoring
+### CORS Errors
+- Ensure your Netlify URL (including `https://`) is correctly set in the `CORS_ORIGINS` environment variable of your Cloud Run service.
 
-**Render:**
-- Built-in metrics dashboard
-- Log streaming
-- Error tracking
-
-**Netlify:**
-- Analytics dashboard
-- Form submissions (if needed)
-- Function logs
-
-### 2. Database Backups
-
-For production, consider:
-- Upgrade to PostgreSQL on Render
-- Set up automated backups
-- Use database migration tools
-
-### 3. SSL/HTTPS
-
-Both Netlify and Render provide:
-- Free SSL certificates
-- Automatic HTTPS
-- No configuration needed
-
----
-
-## Cost Estimation
-
-### Free Tier (Development)
-
-**Netlify:**
-- ✅ Unlimited sites
-- ✅ 100GB bandwidth/month
-- ✅ Automatic SSL
-- ✅ Continuous deployment
-
-**Render:**
-- ✅ 1 web service (free tier)
-- ⚠️ Spins down after 15 min inactivity
-- ⚠️ 750 hours/month limit
-- ⚠️ SQLite data may not persist
-
-### Production Tier
-
-**Netlify Pro:** $19/month
-- Unlimited bandwidth
-- Advanced analytics
-- Password protection
-
-**Render Starter:** $7/month
-- Always-on service
-- PostgreSQL database
-- Priority support
-
----
-
-## Quick Commands Reference
-
-```bash
-# Local Development
-cd dashboard
-npm run dev
-
-# Build for Production
-npm run build
-
-# Deploy to Netlify
-netlify deploy --prod
-
-# Check Backend Locally
-uvicorn data_engine:app --reload
-
-# Test API
-curl https://your-backend.onrender.com/api/zones
-```
-
----
-
-## Next Steps
-
-1. ✅ Deploy backend to Render
-2. ✅ Deploy frontend to Netlify
-3. ✅ Configure CORS
-4. ✅ Test all features
-5. ⚠️ Set up monitoring
-6. ⚠️ Configure custom domain
-7. ⚠️ Set up database backups
-8. ⚠️ Add error tracking (Sentry)
-
-Your Event Management System is now live! 🎉
+### AI Assistant Not Responding
+- Check the Cloud Run logs in the GCP Console.
+- Verify that the `XAI_API_KEY` exists in Secret Manager and that the service account has access.
+- Ensure `GCP_PROJECT_ID` is correctly set in the Cloud Run environment variables.

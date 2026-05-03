@@ -1,3 +1,4 @@
+﻿from mangum import Mangum
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -34,3 +35,6 @@ app.include_router(chat.router)
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "version": "2.0.0"}
+
+
+handler = Mangum(app)
