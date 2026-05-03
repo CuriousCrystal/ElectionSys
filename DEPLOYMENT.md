@@ -1,243 +1,128 @@
-# Deployment Guide: Netlify + Render
+# Deployment Guide: Frontend on Netlify, Backend on Cloud Run
 
-This guide will help you deploy your Event Management System with:
-- **Frontend (React Dashboard)** → Netlify
-- **Backend (FastAPI)** → Render
+This repo is now configured as an election-assistant app with:
+- **Frontend:** static React site hosted on Netlify
+- **Backend:** Python FastAPI service hosted on Google Cloud Run or another Python-capable cloud provider
 
 ---
 
-## Part 1: Deploy Backend to Render
+## Frontend Deployment (Netlify)
 
-### Step 1: Prepare Backend for Deployment
-
-1. **Create a `render.yaml` file** in the root directory:
-
-```yaml
-services:
-  - type: web
-    name: event-management-api
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn data_engine:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: XAI_API_KEY
-        sync: false
-      - key: JWT_SECRET_KEY
-        generateValue: true
-      - key: JWT_ALGORITHM
-        value: HS256
-      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 30
-      - key: DATABASE_URL
-        value: sqlite:///./event_management.db
-```
-
-2. **Create a `.renderignore` file** (optional):
-
-```
-__pycache__/
-*.pyc
-.env
-Responses/
-*.md
-test_system.py
-```
-
-### Step 2: Deploy to Render
-
-1. **Push your code to GitHub:**
+1. Build the frontend:
 
 ```bash
-git add .
-git commit -m "Prepare for deployment"
-git push origin main
+cd frontend
+npm install
+npm run build
 ```
 
-2. **Go to Render:**
-   - Visit https://render.com
-   - Sign up/Login
-   - Click "New +" → "Web Service"
+2. Deploy to Netlify:
 
-3. **Configure the service:**
-   - Connect your GitHub repository
-   - Name: `event-management-api`
-   - Region: Choose closest to your users
-   - Branch: `main`
-   - Root Directory: Leave blank
-   - Runtime: `Python 3`
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn data_engine:app --host 0.0.0.0 --port $PORT`
-
-4. **Set Environment Variables:**
-   Click "Advanced" and add:
-   - `XAI_API_KEY`: Your xAI API key
-   - `JWT_SECRET_KEY`: A strong random string (or let Render generate)
-   - `JWT_ALGORITHM`: `HS256`
-   - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`: `30`
-   - `DATABASE_URL`: `sqlite:///./event_management.db`
-
-5. **Click "Create Web Service"**
-   - Wait for deployment to complete
-   - Copy your backend URL (e.g., `https://event-management-api.onrender.com`)
-
----
-
-## Part 2: Deploy Frontend to Netlify
-
-### Step 1: Update Environment Variables
-
-1. **Edit `dashboard/.env.production`:**
-
-Replace the backend URL with your Render URL:
-
-```env
-VITE_API_URL=https://your-backend-url.onrender.com
-```
-
-### Step 2: Deploy to Netlify
-
-#### Option A: Deploy via Netlify CLI (Recommended)
-
-1. **Install Netlify CLI:**
+- Use the [Netlify app](https://app.netlify.com) and connect your GitHub repository, or
+- Use the Netlify CLI:
 
 ```bash
 npm install -g netlify-cli
-```
-
-2. **Login to Netlify:**
-
-```bash
 netlify login
-```
-
-3. **Initialize Netlify:**
-
-```bash
-cd dashboard
-netlify init
-```
-
-   - Choose: "Create & configure a new site"
-   - Select your team
-   - Site name: `event-management-dashboard` (or your preference)
-
-4. **Deploy:**
-
-```bash
+cd frontend
 netlify deploy --prod
 ```
 
-   - Build command: `npm run build`
-   - Publish directory: `dist`
+3. Set environment variables in Netlify:
 
-#### Option B: Deploy via GitHub Integration
+- `VITE_API_URL` = `https://YOUR_BACKEND_URL`
 
-1. **Push to GitHub:**
+4. Ensure the publish directory is `dist`.
+
+---
+
+## Backend Deployment (Google Cloud Run)
+
+1. Install Google Cloud SDK and authenticate:
 
 ```bash
-git add .
-git commit -m "Prepare for Netlify deployment"
-git push origin main
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
 ```
 
-2. **Go to Netlify:**
-   - Visit https://netlify.com
-   - Click "Add new site" → "Import an existing project"
-   - Connect to GitHub
-   - Select your repository
+2. Build and push a container image:
 
-3. **Configure build settings:**
-   - Base directory: `dashboard`
-   - Build command: `npm run build`
-   - Publish directory: `dashboard/dist`
-
-4. **Set Environment Variables:**
-   - Go to Site settings → Environment variables
-   - Add: `VITE_API_URL` = `https://your-backend-url.onrender.com`
-
-5. **Click "Deploy site"**
-
----
-
-## Part 3: Post-Deployment Configuration
-
-### 1. Update CORS Settings
-
-After deploying, update `data_engine.py` to allow your Netlify URL:
-
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Local development
-        "https://your-site.netlify.app",  # Your Netlify URL
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+```bash
+cd backend
+gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/election-assistant-backend
 ```
 
-### 2. Test Your Deployment
+3. Deploy to Cloud Run:
 
-1. **Visit your Netlify URL:** `https://your-site.netlify.app`
-2. **Login with default credentials:**
-   - Username: `admin`
-   - Password: `admin123`
-3. **Verify all features work:**
-   - Dashboard loads with zone data
-   - Alerts panel shows notifications
-   - Analytics endpoints respond
-
-### 3. Set Up Custom Domain (Optional)
-
-**Netlify:**
-- Go to Domain settings
-- Add your custom domain
-- Follow DNS configuration steps
-
-**Render:**
-- Go to Settings → Custom Domain
-- Add your domain
-- Update DNS records
-
----
-
-## Part 4: Environment-Specific Builds
-
-### Local Development
-
-Create `dashboard/.env.development`:
-
-```env
-VITE_API_URL=http://localhost:8000
+```bash
+gcloud run deploy election-assistant-backend \
+  --image gcr.io/YOUR_PROJECT_ID/election-assistant-backend \
+  --platform managed \
+  --region YOUR_REGION \
+  --allow-unauthenticated \
+  --set-env-vars XAI_API_KEY=YOUR_API_KEY,CORS_ORIGINS=https://YOUR_NETLIFY_SITE_URL
 ```
 
-### Production
-
-The `.env.production` file is already configured.
+4. Update the frontend `VITE_API_URL` to point to the Cloud Run service URL.
 
 ---
 
-## Part 5: Continuous Deployment
+## Environment Configuration
 
-Both Netlify and Render support automatic deployments:
+Copy the example env file and update the values:
 
-- **Netlify:** Automatically deploys on every push to `main`
-- **Render:** Automatically rebuilds and deploys on every push
+```bash
+cp .env.example .env
+```
 
-### Deploy Preview (Netlify)
+Required variables:
 
-Every pull request gets a unique preview URL:
-- No configuration needed
-- Share preview links with team
-- Automatic cleanup after merge
+- `GCP_PROJECT_ID`
+- `GOOGLE_APPLICATION_CREDENTIALS`
+- `XAI_API_KEY`
+- `CORS_ORIGINS`
+
+> Do not commit service account credentials or `.env` files to source control.
 
 ---
 
-## Troubleshooting
+## Notes on Compatibility
 
-### Backend Issues
+- **Netlify cannot host the Python backend**. The frontend is static and compatible with Netlify, but the backend requires a container or dedicated Python runtime.
+- **Use Cloud Run or similar** for the FastAPI API, or host on any provider that supports Python web services.
+- **CORS must be configured** to allow the Netlify frontend origin in the backend settings.
+
+---
+
+## Security Considerations
+
+- Keep secret keys out of source control.
+- Restrict `CORS_ORIGINS` to only trusted frontend domains.
+- Do not store sensitive production credentials in client-side code.
+- Set `GOOGLE_APPLICATION_CREDENTIALS` on the backend host only.
+
+---
+
+## Local Development
+
+Run backend locally:
+
+```bash
+cd backend
+python -m pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Run frontend locally:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the site at `http://localhost:5173`.
+
 
 **Problem:** Backend not starting
 ```bash

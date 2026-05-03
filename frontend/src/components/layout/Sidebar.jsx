@@ -1,14 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Vote, BarChart3, Bell, Settings, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/booths', icon: Vote, label: 'Booths' },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { path: '/alerts', icon: Bell, label: 'Alerts' },
-  { path: '/help', icon: HelpCircle, label: 'Learn' },
-  { path: '/settings', icon: Settings, label: 'Settings' }
+  { path: '/', icon: HelpCircle, label: 'Learn' }
 ];
 
 export default function Sidebar() {

@@ -48,7 +48,7 @@ export default function HelpPage() {
           <h2>Election Learning Center</h2>
           <p>Get easy-to-follow guidance on voter registration, election timelines, and voting steps.</p>
         </div>
-        <button className="btn-primary" onClick={() => navigate('/')}>Back to dashboard</button>
+        <button className="btn-primary" onClick={() => navigate('/')}>Back to home</button>
       </div>
 
       <section className="help-section">
