@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from pydantic import BaseModel
 from app.config import settings
 from app.models.user import UserCreate, UserResponse, UserLogin
 from app.services import auth_service
@@ -8,6 +9,10 @@ from app.services import auth_service
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -20,7 +25,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         username: str = payload.get("sub")
-        if username is None:
+        token_type: str = payload.get("token_type")
+        if username is None or token_type != "access":
             raise credentials_exception
     except JWTError:
         raise credentials_exception
@@ -40,7 +46,7 @@ async def require_admin(current_user = Depends(get_current_user)):
 
 @router.post("/login")
 async def login(login_data: UserLogin):
-    """Authenticate user and return JWT token"""
+    """Authenticate user and return access and refresh tokens"""
     user = await auth_service.authenticate_user(login_data.username, login_data.password)
     if not user:
         raise HTTPException(
@@ -52,7 +58,59 @@ async def login(login_data: UserLogin):
     access_token = auth_service.create_access_token(
         data={"sub": user.username, "role": user.role}
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = auth_service.create_refresh_token(
+        data={"sub": user.username, "role": user.role}
+    )
+    await auth_service.store_refresh_token(user.username, refresh_token)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/refresh")
+async def refresh_token(token_data: TokenRefreshRequest):
+    """Rotate an existing refresh token and issue a new access token"""
+    user = await auth_service.authenticate_refresh_token(token_data.refresh_token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = auth_service.create_access_token(
+        data={"sub": user.username, "role": user.role}
+    )
+    new_refresh_token = auth_service.create_refresh_token(
+        data={"sub": user.username, "role": user.role}
+    )
+
+    await auth_service.revoke_refresh_token(user.username, token_data.refresh_token)
+    await auth_service.store_refresh_token(user.username, new_refresh_token)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/logout")
+async def logout(token_data: TokenRefreshRequest):
+    """Invalidate a refresh token and log out"""
+    user = await auth_service.authenticate_refresh_token(token_data.refresh_token)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    await auth_service.revoke_refresh_token(user.username, token_data.refresh_token)
+    return {"detail": "Logged out successfully"}
 
 
 @router.get("/me", response_model=UserResponse)

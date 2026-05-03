@@ -16,7 +16,7 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-left">
-        <h1 className="header-title">Election Command Center</h1>
+        <h1 className="header-title">Election Assistant Center</h1>
       </div>
       
       <div className="header-right">

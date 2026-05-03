@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -25,6 +25,7 @@ class UserResponse(UserBase):
 class UserInDB(UserBase):
     """User model for database operations"""
     hashed_password: str
+    refresh_token_hashes: List[str] = []
     is_active: bool = True
     created_at: Optional[datetime] = None
 

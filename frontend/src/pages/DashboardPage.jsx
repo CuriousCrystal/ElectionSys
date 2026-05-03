@@ -41,6 +41,16 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
+      <section className="dashboard-intro">
+        <div>
+          <h2>Learn the Election Process</h2>
+          <p>Use the assistant and help center to understand registration, voting, and key election dates.</p>
+        </div>
+        <button className="btn-primary" onClick={() => navigate('/help')}>
+          Explore voter guidance
+        </button>
+      </section>
+
       <StatsCards metrics={metrics} />
       
       <section className="dashboard-section">

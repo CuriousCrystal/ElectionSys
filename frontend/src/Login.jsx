@@ -28,7 +28,7 @@ export default function Login() {
       <div className="login-card">
         <div className="login-header">
           <h1>Election Assistant</h1>
-          <p>Sign in to access the command center</p>
+          <p>Sign in to access voter guidance, election timelines, and management tools.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

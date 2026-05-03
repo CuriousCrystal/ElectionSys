@@ -6,6 +6,7 @@ import BoothsPage from './pages/BoothsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AlertsPage from './pages/AlertsPage';
 import SettingsPage from './pages/SettingsPage';
+import HelpPage from './pages/HelpPage';
 import Login from './Login';
 import ChatWidget from './components/chat/ChatWidget';
 
@@ -45,6 +46,13 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <AlertsPage />
+              </Layout>
+            </PrivateRoute>
+          } />
+          <Route path="/help" element={
+            <PrivateRoute>
+              <Layout>
+                <HelpPage />
               </Layout>
             </PrivateRoute>
           } />

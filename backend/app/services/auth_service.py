@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 from jose import JWTError, jwt
 import bcrypt
 from app.config import settings
@@ -23,10 +23,84 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+    to_encode.update({"exp": expire, "token_type": "access"})
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
+
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create JWT refresh token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days)
+    to_encode.update({"exp": expire, "token_type": "refresh"})
+    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+
+
+def hash_token(token: str) -> str:
+    """Hash a refresh token for secure storage"""
+    return bcrypt.hashpw(token.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+async def store_refresh_token(username: str, refresh_token: str) -> None:
+    """Store a hashed refresh token for a user"""
+    users_collection = get_collection("users")
+    user = await get_user_by_username(username)
+    if not user:
+        return
+
+    refresh_tokens = list(user.refresh_token_hashes or [])
+    refresh_tokens.append(hash_token(refresh_token))
+    if len(refresh_tokens) > 10:
+        refresh_tokens = refresh_tokens[-10:]
+
+    await users_collection.update_one(
+        {"username": username},
+        {"$set": {"refresh_token_hashes": refresh_tokens}},
+    )
+
+
+async def revoke_refresh_token(username: str, refresh_token: str) -> None:
+    """Revoke a specific refresh token for a user"""
+    users_collection = get_collection("users")
+    user = await get_user_by_username(username)
+    if not user:
+        return
+
+    valid_hashes: List[str] = []
+    for token_hash in user.refresh_token_hashes or []:
+        if not verify_password(refresh_token, token_hash):
+            valid_hashes.append(token_hash)
+
+    await users_collection.update_one(
+        {"username": username},
+        {"$set": {"refresh_token_hashes": valid_hashes}},
+    )
+
+
+async def authenticate_refresh_token(refresh_token: str) -> Optional[UserInDB]:
+    """Authenticate a refresh token and return the owning user"""
+    try:
+        payload = jwt.decode(refresh_token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        username: str = payload.get("sub")
+        token_type: str = payload.get("token_type")
+        if username is None or token_type != "refresh":
+            return None
+    except JWTError:
+        return None
+
+    user = await get_user_by_username(username)
+    if not user:
+        return None
+
+    for token_hash in user.refresh_token_hashes or []:
+        if verify_password(refresh_token, token_hash):
+            return user
+
+    return None
 
 
 async def get_user_by_username(username: str) -> Optional[UserInDB]:
